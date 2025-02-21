@@ -24,7 +24,7 @@
       left: 0;
       z-index: 1;
     }
-    /* Overlay para mostrar el nombre de la ciudad (usado en la animación) */
+    /* Overlay para mostrar el nombre de la ciudad */
     #cityName {
       position: absolute;
       top: 20px;
@@ -35,7 +35,7 @@
       text-shadow: 1px 1px 3px black;
       z-index: 3;
     }
-    /* Overlay para mostrar mensajes (RASTREANDO / OBJETIVO ENCONTRADO) */
+    /* Overlay para mostrar mensajes */
     #objectiveFound {
       position: absolute;
       bottom: 20px;
@@ -53,7 +53,7 @@
       50% { opacity: 0; }
       100% { opacity: 1; }
     }
-    /* Overlay para el efecto de fade-in al inicio */
+    /* Overlay para el fade-in inicial */
     #fadeOverlay {
       position: absolute;
       width: 100%;
@@ -63,20 +63,34 @@
       opacity: 1;
       transition: opacity 4s ease;
     }
+    /* Coordenadas en la esquina inferior izquierda */
+    #coordinatesDisplay {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      font-family: monospace;
+      font-size: 16px;
+      color: #00FF00;
+      background: rgba(0,0,0,0.5);
+      padding: 5px 10px;
+      border-radius: 4px;
+      z-index: 5;
+    }
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
   <div id="cityName"></div>
   <div id="objectiveFound">RASTREANDO</div>
-  <!-- Overlay de inicio -->
+  <div id="coordinatesDisplay"></div>
+  <!-- Overlay de fade-in -->
   <div id="fadeOverlay"></div>
   
   <script>
-    // Inserta tu token de Cesium Ion aquí:
+    // Token de Cesium Ion
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiOGNjNjczOS05ODM1LTQ4YjQtOTczNy1lNDliMTg4NzkyNTEiLCJpZCI6Mjc3ODQyLCJpYXQiOjE3NDAwOTgyMzl9.h5RevJ_fpBIjEHlogZOePThDrY3SqygU2FiRkSnXmLM';
 
-    // Inicializar el visor de Cesium
+    // Inicialización del visor
     const viewer = new Cesium.Viewer('cesiumContainer', {
       imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
       baseLayerPicker: false,
@@ -86,7 +100,7 @@
     viewer.scene.globe.enableLighting = true;
 
     // ======================
-    // UBICACIONES (principalmente EE.UU. y México, y algunas de Perú, Uruguay y Colombia)
+    // UBICACIONES (EE.UU. y México, más algunas de Perú, Uruguay y Colombia)
     // ======================
     const locations = [
       { lon: -74.0060,   lat: 40.7128,  height: 20, city: "New York, USA",           timeOfDay: "day" },
@@ -168,17 +182,35 @@
       viewer.clock.currentTime = Cesium.JulianDate.fromIso8601(isoTime);
     }
 
-    // Parámetros de animación (tiempos aumentados)
+    // --- Gestión de coordenadas ---
+    let coordinateInterval = null;
+    function startUpdatingCoordinates() {
+      coordinateInterval = setInterval(() => {
+        const cartographic = viewer.camera.positionCartographic;
+        const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
+        const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
+        document.getElementById("coordinatesDisplay").innerText = "Lat: " + lat + " | Lon: " + lon;
+      }, 100);
+    }
+    function stopUpdatingCoordinates() {
+      if(coordinateInterval) {
+        clearInterval(coordinateInterval);
+        coordinateInterval = null;
+      }
+    }
+    // --- Fin de coordenadas ---
+
+    // Parámetros de animación
     const overviewHeight = 5000000;      // Vista general
-    const overviewDuration = 15;         // 20 segundos para vuelo a vista general
-    const destinationDuration = 20;      // 20 segundos para descender a la ubicación
-    const awayDuration = 20;             // 20 segundos para el alejamiento
+    const overviewDuration = 15;         // 15 segundos para vuelo a vista general
+    const destinationDuration = 15;      // 20 segundos para el descenso a la ubicación
+    const awayDuration = 15;             // 20 segundos para el alejamiento
     const awayHeightGlobal = 10000000;   // Altura para ver el planeta completo
 
     // Vuelo a vista general
     function flyToOverview(location, callback) {
       document.getElementById('cityName').innerText = "";
-      // Mantenemos "RASTREANDO" desde el inicio
+      // Siempre mostramos "RASTREANDO" al inicio
       const objEl = document.getElementById('objectiveFound');
       objEl.innerText = "RASTREANDO";
       objEl.style.opacity = 1;
@@ -190,7 +222,7 @@
       });
     }
 
-    // Giro en vista general (5 segundos, efecto 3D)
+    // Giro en vista general con movimientos aleatorios (duración extendida)
     function spinAroundOverview(callback) {
       const objEl = document.getElementById('objectiveFound');
       objEl.innerText = "RASTREANDO";
@@ -198,15 +230,19 @@
       const start = performance.now();
       const initialHeading = viewer.camera.heading;
       const initialPitch = viewer.camera.pitch;
+      // Genera pequeños offsets aleatorios para heading y pitch (±5° aprox.)
+      const randomHeadingOffset = Cesium.Math.toRadians((Math.random() - 0.5) * 10);
+      const randomPitchOffset = Cesium.Math.toRadians((Math.random() - 0.5) * 10);
+      // Duración extendida para que se note el movimiento
       const duration = 12000;
       function spin() {
         const elapsed = performance.now() - start;
         let fraction = elapsed / duration;
         if (fraction > 1) fraction = 1;
-        const newPitch = initialPitch + 0.1 * Math.sin(fraction * Math.PI);
+        const newPitch = initialPitch + 0.1 * Math.sin(fraction * Math.PI) + randomPitchOffset;
         viewer.camera.setView({
           orientation: {
-            heading: initialHeading + fraction * Cesium.Math.TWO_PI,
+            heading: initialHeading + fraction * Cesium.Math.TWO_PI + randomHeadingOffset,
             pitch: newPitch,
             roll: viewer.camera.roll
           }
@@ -223,22 +259,28 @@
     // Vuelo a la ubicación destino (descenso)
     function flyToDestination(location, callback) {
       document.getElementById('cityName').innerText = location.city;
-      // Mantenemos "RASTREANDO" hasta el momento de detección
+      // Durante el descenso, seguimos mostrando "RASTREANDO"
       const objEl = document.getElementById('objectiveFound');
       objEl.innerText = "RASTREANDO";
       objEl.style.opacity = 1;
       setTimeOfDay(location.timeOfDay);
+      // Inicia actualización de coordenadas para mostrar lat/lon en tiempo real
+      startUpdatingCoordinates();
       viewer.camera.flyTo({
         destination: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, location.height + 200),
         duration: destinationDuration,
-        complete: callback,
+        complete: () => {
+          // Al llegar, detenemos la actualización y dejamos fijas las coordenadas
+          stopUpdatingCoordinates();
+          callback();
+        },
         cancel: callback
       });
     }
 
-    // Función que muestra el marcador rojo y, tras 1 segundo, cambia el mensaje a "OBJETIVO ENCONTRADO" para iniciar el giro en destino
+    // Función que muestra el marcador rojo y, tras 1 segundo, cambia el mensaje a "OBJETIVO ENCONTRADO" y ejecuta el giro en destino
     function showTargetFoundAndSpin(location, callback) {
-      // Agrega un marcador rojo en la ubicación detectada
+      // Agrega el marcador rojo
       const marker = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, 0),
         billboard: {
@@ -251,16 +293,18 @@
       setTimeout(() => {
         const objEl = document.getElementById('objectiveFound');
         objEl.innerText = "OBJETIVO ENCONTRADO";
-        // Luego se inicia el giro en destino (720° en 5 segundos con efecto 3D)
+        // Inicia el giro en destino: 720° en 5 segundos con efecto 3D
         spinAtDestination(() => {
+          // Una vez finalizado el giro, elimina el marcador
+          viewer.entities.remove(marker);
           callback();
         });
       }, 1000);
     }
 
-    // Giro en destino: 720° (2 rotaciones) en 5 segundos, con efecto 3D (subida y bajada)
+    // Giro en destino: 720° (2 rotaciones) en 5 segundos con efecto 3D (subida y bajada)
     function spinAtDestination(callback) {
-      const duration = 5000;
+      const duration = 8000;
       const start = performance.now();
       const initialHeading = viewer.camera.heading;
       const initialPitch = viewer.camera.pitch;
@@ -286,7 +330,7 @@
       requestAnimationFrame(spin);
     }
 
-    // Alejamiento con zoom global
+    // Alejamiento con zoom out global
     function flyAwayAndZoomOut(callback) {
       viewer.camera.flyTo({
         destination: Cesium.Cartesian3.fromDegrees(0, 0, awayHeightGlobal),
@@ -298,7 +342,7 @@
 
     // Giro tras zoom (5 segundos, 45° con efecto 3D)
     function spinAfterZoom(callback) {
-      const duration = 5000;
+      const duration = 8000;
       const extraAngle = Cesium.Math.toRadians(45);
       const start = performance.now();
       const initialHeading = viewer.camera.heading;
@@ -326,9 +370,10 @@
     }
 
     // Orquesta el recorrido entre ubicaciones:
-    // Después de volar a la ubicación y realizar el descenso,
-    // se muestra el marcador y se espera 1 segundo para cambiar el mensaje y ejecutar el giro.
-    // Luego se espera 2 segundos antes de alejar la cámara y continuar.
+    // Se vuela a la vista general, se realizan giros con movimientos aleatorios,
+    // se desciende (actualizando las coordenadas en la esquina) y al llegar se muestra el marcador.
+    // Tras 1 segundo, cambia el mensaje y se ejecuta el giro en destino;
+    // luego se espera 2 (o 3) segundos antes de iniciar el alejamiento.
     function flyThroughLocations(index) {
       if (index >= locations.length) {
         console.log("Recorrido completo");
@@ -340,7 +385,7 @@
           flyToDestination(location, () => {
             console.log("Llegamos a " + location.city);
             showTargetFoundAndSpin(location, () => {
-              // Espera 2 segundos antes de iniciar el alejamiento
+              // Espera 3 segundos antes de iniciar el alejamiento
               setTimeout(() => {
                 flyAwayAndZoomOut(() => {
                   spinAfterZoom(() => {
@@ -354,14 +399,14 @@
       });
     }
 
-    // Inicio tras fade-out
+    // Inicio: tras el fade-out inicial
     window.addEventListener('load', () => {
       setTimeout(() => {
         document.getElementById('fadeOverlay').style.opacity = 0;
         setTimeout(() => {
           document.getElementById('fadeOverlay').remove();
           flyThroughLocations(0);
-        }, 3000);
+        }, 4000);
       }, 4000);
     });
   </script>
