@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Animación con Cesium – Día, Tarde y Noche con Alejamiento y Giros</title>
+  <!-- Incluye CesiumJS -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <style>
+    html, body {
+      width: 100%; 
+      height: 100%; 
+      margin: 0; 
+      padding: 0; 
+      overflow: hidden;
+      background: black;
+    }
+    /* Contenedor del visor */
+    #cesiumContainer {
+      width: 100%; 
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    /* Overlay para mostrar el nombre de la ciudad (usado en la animación) */
+    #cityName {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      color: white;
+      text-shadow: 1px 1px 3px black;
+      z-index: 3;
+    }
+    /* Overlay para mostrar mensajes (RASTREANDO / OBJETIVO ENCONTRADO) */
+    #objectiveFound {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 30px;
+      color: yellow;
+      text-shadow: 1px 1px 3px black;
+      z-index: 3;
+      opacity: 0;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <div id="cityName"></div>
+  <div id="objectiveFound">OBJETIVO ENCONTRADO</div>
+  
+  <script>
+    // Inserta tu token de Cesium Ion aquí:
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiOGNjNjczOS05ODM1LTQ4YjQtOTczNy1lNDliMTg4NzkyNTEiLCJpZCI6Mjc3ODQyLCJpYXQiOjE3NDAwOTgyMzl9.h5RevJ_fpBIjEHlogZOePThDrY3SqygU2FiRkSnXmLM';
+
+    // Inicializar el visor de Cesium
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
+      baseLayerPicker: false,
+      timeline: false,
+      animation: false
+    });
+    viewer.scene.globe.enableLighting = true;
+
+    // Array de 20 ubicaciones en diferentes países, con datos de tiempo y animación
+    const locations = [
+      { lon: -77.055,  lat: -12.045, height: 20, city: "Barrio La Molina, Lima, Perú", timeOfDay: "day" },
+      { lon: -56.18,   lat: -34.88,  height: 20, city: "Villa Biarritz, Montevideo, Uruguay", timeOfDay: "afternoon" },
+      { lon: -78.48,   lat: -0.17,   height: 20, city: "Barrio La Carolina, Quito, Ecuador", timeOfDay: "night" },
+      { lon: -70.67,   lat: -33.44,  height: 20, city: "Providencia, Santiago, Chile", timeOfDay: "day" },
+      { lon: -99.14,   lat: 19.42,   height: 20, city: "Colonia Roma, Ciudad de México, México", timeOfDay: "afternoon" },
+      { lon: -58.39,   lat: -34.60,  height: 20, city: "Belgrano, Buenos Aires, Argentina", timeOfDay: "day" },
+      { lon: -74.08,   lat: 4.71,    height: 20, city: "Chapinero, Bogotá, Colombia", timeOfDay: "afternoon" },
+      { lon: -84.10,   lat: 9.93,    height: 20, city: "Escazú, San José, Costa Rica", timeOfDay: "day" },
+      { lon: -57.58,   lat: -25.26,  height: 20, city: "Villa Morra, Asunción, Paraguay", timeOfDay: "afternoon" },
+      { lon: -69.94,   lat: 18.48,   height: 20, city: "Los Cacicazgos, Santo Domingo, RD", timeOfDay: "day" },
+      { lon: -79.52,   lat: 8.98,    height: 20, city: "El Cangrejo, Ciudad de Panamá, Panamá", timeOfDay: "day" },
+      { lon: -89.21,   lat: 13.69,   height: 20, city: "Escalón, San Salvador, El Salvador", timeOfDay: "afternoon" },
+      { lon: -3.71,    lat: 40.42,   height: 20, city: "Malasaña, Madrid, España", timeOfDay: "day" },
+      { lon: 2.17,     lat: 41.38,   height: 20, city: "El Raval, Barcelona, España", timeOfDay: "afternoon" },
+      { lon: -0.38,    lat: 39.47,   height: 20, city: "Benimaclet, Valencia, España", timeOfDay: "day" },
+      { lon: -5.99,    lat: 37.39,   height: 20, city: "Triana, Sevilla, España", timeOfDay: "afternoon" },
+      { lon: -66.91,   lat: 10.48,   height: 20, city: "Los Palos Grandes, Caracas, Venezuela", timeOfDay: "night" },
+      { lon: -71.54,   lat: -16.40,  height: 20, city: "Yanahuara, Arequipa, Perú", timeOfDay: "afternoon" },
+      { lon: -66.16,   lat: -17.39,  height: 20, city: "Sacaba, Cochabamba, Bolivia", timeOfDay: "day" },
+      { lon: -0.89,    lat: 41.65,   height: 20, city: "El Cinto, Zaragoza, España", timeOfDay: "day" }
+    ];
+
+    // ======================
+    // AGREGAR ETIQUETAS EN EL MAPA
+    // ======================
+
+    // 1. Etiquetas de países (se extrae el país de la propiedad 'city')
+    locations.forEach(loc => {
+      // Extrae el nombre del país (último elemento de la cadena)
+      const partes = loc.city.split(',');
+      const pais = partes[partes.length - 1].trim();
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(loc.lon, loc.lat),
+        label: {
+          text: pais,
+          font: '16px sans-serif',
+          fillColor: Cesium.Color.CYAN,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 2,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        }
+      });
+    });
+
+    // 2. Etiquetas de continentes (posición aproximada)
+    const continentes = [
+      { lon: -100, lat: 40, name: "América del Norte" },
+      { lon: -60,  lat: -15, name: "América del Sur" },
+      { lon: -10,  lat: 50, name: "Europa" },
+      { lon: 20,   lat: 0,  name: "África" },
+      { lon: 100,  lat: 45, name: "Asia" },
+      { lon: 135,  lat: -25, name: "Oceanía" }
+    ];
+    continentes.forEach(cont => {
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(cont.lon, cont.lat),
+        label: {
+          text: cont.name,
+          font: '24px sans-serif',
+          fillColor: Cesium.Color.ORANGE,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 2,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        }
+      });
+    });
+
+    // ======================
+    // FIN DE LAS ETIQUETAS
+    // ======================
+
+    // Función para configurar la hora según el ambiente deseado
+    function setTimeOfDay(timeOfDay) {
+      let isoTime;
+      if (timeOfDay === "day") {
+        isoTime = "2025-02-20T12:00:00Z";
+      } else if (timeOfDay === "afternoon") {
+        isoTime = "2025-02-20T17:00:00Z";
+      } else if (timeOfDay === "night") {
+        isoTime = "2025-02-20T23:00:00Z";
+      } else {
+        isoTime = "2025-02-20T12:00:00Z";
+      }
+      const newTime = Cesium.JulianDate.fromIso8601(isoTime);
+      viewer.clock.currentTime = newTime;
+    }
+
+    // Parámetros para la animación
+    const overviewHeight = 5000000;       // Altura para la vista general
+    const overviewDuration = 10;          // Duración (segundos) del vuelo a vista general
+    const spinDuration = 8;               // Duración (segundos) del giro completo (360°)
+    const destinationHeightOffset = 200;  // Offset para el vuelo de acercamiento (más alto para mayor claridad)
+    const destinationDuration = 6;        // Duración (segundos) del vuelo de acercamiento
+    const awayHeight = 5000000;           // Altura a la que se aleja la cámara
+    const awayDuration = 15;              // Duración (segundos) del vuelo de alejamiento
+
+    // Función: Vuelo a vista general (overview)
+    function flyToOverview(location, callback) {
+      document.getElementById('cityName').innerText = "";
+      document.getElementById('objectiveFound').style.opacity = 0;
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, overviewHeight),
+        duration: overviewDuration,
+        complete: callback,
+        cancel: callback
+      });
+    }
+
+    // Función: Giro de 360° mostrando "RASTREANDO"
+    function spinAroundOverview(callback) {
+      const objEl = document.getElementById('objectiveFound');
+      objEl.innerText = "RASTREANDO";
+      objEl.style.opacity = 1;
+      const start = performance.now();
+      const initialHeading = viewer.camera.heading;
+      function spin() {
+        const elapsed = performance.now() - start;
+        let fraction = elapsed / (spinDuration * 3000);
+        if (fraction > 1) fraction = 1;
+        viewer.camera.setView({
+          orientation: {
+            heading: initialHeading + fraction * Cesium.Math.TWO_PI,
+            pitch: viewer.camera.pitch,
+            roll: viewer.camera.roll
+          }
+        });
+        if (fraction < 1) {
+          requestAnimationFrame(spin);
+        } else {
+          callback();
+        }
+      }
+      requestAnimationFrame(spin);
+    }
+
+    // Función: Giro de 360° justo antes del descenso, mostrando "OBJETIVO ENCONTRADO"
+    function spinBeforeDescent(callback) {
+      const objEl = document.getElementById('objectiveFound');
+      objEl.innerText = "OBJETIVO ENCONTRADO";
+      objEl.style.opacity = 1;
+      const start = performance.now();
+      const initialHeading = viewer.camera.heading;
+      function spin() {
+        const elapsed = performance.now() - start;
+        let fraction = elapsed / (spinDuration * 1500);
+        if (fraction > 1) fraction = 1;
+        viewer.camera.setView({
+          orientation: {
+            heading: initialHeading + fraction * Cesium.Math.TWO_PI,
+            pitch: viewer.camera.pitch,
+            roll: viewer.camera.roll
+          }
+        });
+        if (fraction < 1) {
+          requestAnimationFrame(spin);
+        } else {
+          callback();
+        }
+      }
+      requestAnimationFrame(spin);
+    }
+
+    // Función: Vuelo de acercamiento a la ubicación destino y ajuste del ambiente según el tiempo
+    function flyToDestination(location, callback) {
+      document.getElementById('cityName').innerText = location.city;
+      const objEl = document.getElementById('objectiveFound');
+      objEl.innerText = "OBJETIVO ENCONTRADO";
+      objEl.style.opacity = 1;
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, location.height + destinationHeightOffset),
+        duration: destinationDuration,
+        complete: callback,
+        cancel: callback
+      });
+    }
+
+    // Función: Mostrar la llegada a la ubicación con un marcador estilo "target"
+    function showArrivalAtLocation(location, callback) {
+      setTimeOfDay(location.timeOfDay);
+      const marker = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, 0),
+        billboard: {
+          image: 'https://img.icons8.com/fluency/64/000000/target.png',
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          scale: 1.0
+        }
+      });
+      setTimeout(() => {
+        setTimeout(() => {
+          document.getElementById('objectiveFound').style.opacity = 0;
+          viewer.entities.remove(marker);
+          callback();
+        }, 10000);
+      }, 7000);
+    }
+
+    // Función: Alejamiento (fly-away) desde la ubicación actual a una altitud mayor
+    function flyAwayFromDestination(location, callback) {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, awayHeight),
+        duration: awayDuration,
+        complete: callback,
+        cancel: callback
+      });
+    }
+
+    // Función: Animación extra entre ubicaciones (giro de 90° durante 5 segundos)
+    function spinBeforeNext(callback) {
+      const spinDurationExtra = 8; // Duración del giro extra
+      const extraAngle = Cesium.Math.toRadians(90); // Giro de 90°
+      const start = performance.now();
+      const initialHeading = viewer.camera.heading;
+      function spin() {
+        const elapsed = performance.now() - start;
+        let fraction = elapsed / (spinDurationExtra * 1000);
+        if (fraction > 1) fraction = 1;
+        viewer.camera.setView({
+          orientation: {
+            heading: initialHeading + fraction * extraAngle,
+            pitch: viewer.camera.pitch,
+            roll: viewer.camera.roll
+          }
+        });
+        if (fraction < 1) {
+          requestAnimationFrame(spin);
+        } else {
+          callback();
+        }
+      }
+      requestAnimationFrame(spin);
+    }
+
+    // Función que orquesta el recorrido por las ubicaciones
+    function flyThroughLocations(index) {
+      if (index >= locations.length) {
+        console.log("Recorrido completo");
+        return;
+      }
+      const location = locations[index];
+      flyToOverview(location, () => {
+        spinAroundOverview(() => {
+          spinBeforeDescent(() => {
+            flyToDestination(location, () => {
+              console.log("Llegamos a " + location.city);
+              showArrivalAtLocation(location, () => {
+                flyAwayFromDestination(location, () => {
+                  spinBeforeNext(() => {
+                    flyThroughLocations(index + 1);
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    }
+
+    // Inicia el recorrido 8 segundos después de cargar la página
+    setTimeout(() => {
+      flyThroughLocations(0);
+    }, 6000);
+  </script>
+</body>
+</html>
