@@ -2,22 +2,22 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Animación con Cesium – Día, Tarde y Noche con Alejamiento y Giros</title>
+  <title>Animación con Cesium – Ubicaciones Aleatorias y Orbita Focalizada</title>
   <!-- Incluye CesiumJS -->
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
     html, body {
-      width: 100%; 
-      height: 100%; 
-      margin: 0; 
-      padding: 0; 
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
       background: black;
     }
     /* Contenedor del visor */
     #cesiumContainer {
-      width: 100%; 
+      width: 100%;
       height: 100%;
       position: absolute;
       top: 0;
@@ -35,7 +35,7 @@
       text-shadow: 1px 1px 3px black;
       z-index: 3;
     }
-    /* Overlay para mostrar mensajes */
+    /* Overlay para mostrar mensajes (acciones) */
     #objectiveFound {
       position: absolute;
       bottom: 20px;
@@ -63,11 +63,11 @@
       opacity: 1;
       transition: opacity 4s ease;
     }
-    /* Coordenadas en la esquina inferior izquierda */
+    /* Coordenadas en la esquina inferior derecha */
     #coordinatesDisplay {
       position: absolute;
       bottom: 10px;
-      left: 10px;
+      right: 10px;
       font-family: monospace;
       font-size: 16px;
       color: #00FF00;
@@ -76,21 +76,83 @@
       border-radius: 4px;
       z-index: 5;
     }
+    /* Hacker feed: stream de mensajes (derecha) */
+    #hackerFeed {
+      position: absolute;
+      bottom: 50px;
+      right: 10px;
+      width: 220px;
+      height: 150px;
+      background: rgba(0,0,0,0.8);
+      border: 2px solid #00FF00;
+      color: #00FF00;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 5px;
+      z-index: 6;
+      overflow-y: auto;
+    }
+    /* Hacker Avatar: imagen del hacker (izquierda superior) */
+    #hackerAvatar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 100px;
+      height: 100px;
+      z-index: 7;
+    }
+    
+    #hackerVideo {
+  position: absolute;
+  bottom: 50px;
+  left: 20px;
+  width: 400px;
+  height: auto;
+  
+  z-index: 6;
+}
+@keyframes glitch {
+  0%, 100% { filter: none; }
+  10% { filter: brightness(200%) contrast(50%); }
+  20% { filter: hue-rotate(90deg) blur(3px); }
+  30% { filter: contrast(300%) grayscale(100%); }
+  40% { filter: none; }
+}
+
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
+  <!-- Hacker Avatar -->
+  <div id="hackerAvatar">
+    <img src="https://img.icons8.com/fluency/96/hacker-mask.png" alt="Hacker">
+  </div>
   <div id="cityName"></div>
   <div id="objectiveFound">RASTREANDO</div>
   <div id="coordinatesDisplay"></div>
-  <!-- Overlay de fade-in -->
+  <div id="hackerFeed">
+    <p>Conectando...</p>
+    <p>Accediendo a sistemas...</p>
+    <p>Descifrando datos...</p>
+  </div>
   <div id="fadeOverlay"></div>
+  <video id="hackerVideo" src="videos/finalhack.mp4" autoplay loop muted></video>
+
   
   <script>
+    function addGlitchEffect() {
+  const video = document.getElementById("hackerVideo");
+  video.style.animation = "glitch 1s steps(5, end)";
+  setTimeout(() => {
+    video.style.animation = "none";
+  }, 1000);
+}
+setInterval(addGlitchEffect, 15000);
+
     // Token de Cesium Ion
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiOGNjNjczOS05ODM1LTQ4YjQtOTczNy1lNDliMTg4NzkyNTEiLCJpZCI6Mjc3ODQyLCJpYXQiOjE3NDAwOTgyMzl9.h5RevJ_fpBIjEHlogZOePThDrY3SqygU2FiRkSnXmLM';
 
-    // Inicialización del visor
+    // Inicializamos el visor con imageryProvider de Ion para mantener la apariencia original
     const viewer = new Cesium.Viewer('cesiumContainer', {
       imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
       baseLayerPicker: false,
@@ -98,35 +160,61 @@
       animation: false
     });
     viewer.scene.globe.enableLighting = true;
+    viewer.scene.globe.show = true;
 
-    // ======================
-    // UBICACIONES (EE.UU. y México, más algunas de Perú, Uruguay y Colombia)
-    // ======================
-    const locations = [
-      { lon: -74.0060,   lat: 40.7128,  height: 20, city: "New York, USA",           timeOfDay: "day" },
-      { lon: -118.2437,  lat: 34.0522,  height: 20, city: "Los Angeles, USA",        timeOfDay: "day" },
-      { lon: -87.6298,   lat: 41.8781,  height: 20, city: "Chicago, USA",            timeOfDay: "afternoon" },
-      { lon: -95.3698,   lat: 29.7604,  height: 20, city: "Houston, USA",            timeOfDay: "day" },
-      { lon: -80.1918,   lat: 25.7617,  height: 20, city: "Miami, USA",              timeOfDay: "afternoon" },
-      { lon: -99.1332,   lat: 19.4326,  height: 20, city: "Ciudad de México, México", timeOfDay: "afternoon" },
-      { lon: -103.3496,  lat: 20.6597,  height: 20, city: "Guadalajara, México",     timeOfDay: "day" },
-      { lon: -100.3161,  lat: 25.6866,  height: 20, city: "Monterrey, México",       timeOfDay: "day" },
-      { lon: -77.0428,   lat: -12.0464, height: 20, city: "Lima, Perú",              timeOfDay: "day" },
-      { lon: -56.1645,   lat: -34.9011, height: 20, city: "Montevideo, Uruguay",     timeOfDay: "afternoon" },
-      { lon: -74.0721,   lat: 4.7110,   height: 20, city: "Bogotá, Colombia",        timeOfDay: "afternoon" },
-      { lon: -122.4194,  lat: 37.7749,  height: 20, city: "San Francisco, USA",      timeOfDay: "day" }
+    // Función para barajar (shuffle) un array
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    // --- Definición de las 20 ubicaciones ---
+    // 15 ubicaciones: 8 de EE.UU. y 7 de México
+    const locationsUSMexico = [
+      { lon: -46.6333, lat: -23.5505, height: 20, city: "São Paulo, Brasil", timeOfDay: "night" },
+      { lon: -118.2437, lat: 34.0522, height: 20, city: "Los Angeles, USA", timeOfDay: "night" },
+      { lon: -87.6298, lat: 41.8781, height: 20, city: "Chicago, USA", timeOfDay: "afternoon" },
+      { lon: -95.3698, lat: 29.7604, height: 20, city: "Houston, USA", timeOfDay: "day" },
+      { lon: -80.1918, lat: 25.7617, height: 20, city: "Miami, USA", timeOfDay: "night" },
+      { lon: -122.4194, lat: 37.7749, height: 20, city: "San Francisco, USA", timeOfDay: "day" },
+      { lon: -122.3321, lat: 47.6062, height: 20, city: "Seattle, USA", timeOfDay: "day" },
+      { lon: -104.9903, lat: 39.7392, height: 20, city: "Denver, USA", timeOfDay: "day" },
+      { lon: -99.1332, lat: 19.4326, height: 20, city: "Ciudad de México, México", timeOfDay: "afternoon" },
+      { lon: -103.3496, lat: 20.6597, height: 20, city: "Guadalajara, México", timeOfDay: "day" },
+      { lon: -100.3161, lat: 25.6866, height: 20, city: "Monterrey, México", timeOfDay: "day" },
+      { lon: -98.2062,  lat: 19.0413, height: 20, city: "Puebla, México", timeOfDay: "afternoon" },
+      { lon: -117.0382, lat: 32.5149, height: 20, city: "Tijuana, México", timeOfDay: "day" },
+      { lon: -86.8515,  lat: 21.1619, height: 20, city: "Cancún, México", timeOfDay: "afternoon" },
+      { lon: -89.6237,  lat: 20.9674, height: 20, city: "Mérida, México", timeOfDay: "afternoon" }
     ];
+    // 5 ubicaciones sudamericanas: Perú, Chile, Colombia, Bolivia y Brasil
+    const locationsSA = [
+      { lon: -77.0428, lat: -12.0464, height: 20, city: "Lima, Perú", timeOfDay: "night" },
+      { lon: -70.6693, lat: -33.4489, height: 20, city: "Santiago, Chile", timeOfDay: "day" },
+      { lon: -74.0721, lat: 4.7110,   height: 20, city: "Bogotá, Colombia", timeOfDay: "afternoon" },
+      { lon: -68.1193, lat: -16.4897, height: 20, city: "La Paz, Bolivia", timeOfDay: "afternoon" },
+      { lon: -46.6333, lat: -23.5505, height: 20, city: "São Paulo, Brasil", timeOfDay: "day" }
+    ];
+    // Combina ambas listas para obtener 20 ubicaciones
+    let locations = locationsUSMexico.concat(locationsSA);
 
-    // ======================
-    // ETIQUETAS EN EL MAPA
-    // ======================
+    // --- Etiquetas únicas para países y ciudades ---
+    const uniqueCountries = {};
     locations.forEach(loc => {
       const partes = loc.city.split(',');
-      const pais = partes[partes.length - 1].trim();
+      const country = partes.length >= 2 ? partes[partes.length - 1].trim() : "";
+      if (country && !uniqueCountries[country]) {
+        uniqueCountries[country] = loc;
+      }
+    });
+    Object.keys(uniqueCountries).forEach(country => {
+      const loc = uniqueCountries[country];
       viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(loc.lon, loc.lat),
         label: {
-          text: pais,
+          text: country,
           font: '16px sans-serif',
           fillColor: Cesium.Color.CYAN,
           outlineColor: Cesium.Color.BLACK,
@@ -134,40 +222,63 @@
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(1000000, 1e10)
         }
       });
     });
-
-    const continentes = [
-      { lon: -100, lat: 40, name: "América del Norte" },
-      { lon: -60,  lat: -15, name: "América del Sur" },
-      { lon: -10,  lat: 50,  name: "Europa" },
-      { lon: 20,   lat: 0,   name: "África" },
-      { lon: 100,  lat: 45,  name: "Asia" },
-      { lon: 135,  lat: -25, name: "Oceanía" }
-    ];
-    continentes.forEach(cont => {
+    locations.forEach(loc => {
+      const partes = loc.city.split(',');
+      const city = partes[0].trim();
       viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(cont.lon, cont.lat),
+        position: Cesium.Cartesian3.fromDegrees(loc.lon, loc.lat),
         label: {
-          text: cont.name,
-          font: '24px sans-serif',
-          fillColor: Cesium.Color.ORANGE,
+          text: city,
+          font: '16px sans-serif',
+          fillColor: Cesium.Color.LIME,
           outlineColor: Cesium.Color.BLACK,
           outlineWidth: 2,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
           horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 1000000)
         }
       });
     });
-    // ======================
-    // FIN ETIQUETAS
-    // ======================
+    // Etiquetas de continente: una para América del Norte y otra para América del Sur
+    viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(-100, 40),
+      label: {
+        text: "América del Norte",
+        font: '24px sans-serif',
+        fillColor: Cesium.Color.ORANGE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        distanceDisplayCondition: new Cesium.DistanceDisplayCondition(5000000, 1e10)
+      }
+    });
+    viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(-60, -15),
+      label: {
+        text: "América del Sur",
+        font: '24px sans-serif',
+        fillColor: Cesium.Color.ORANGE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        distanceDisplayCondition: new Cesium.DistanceDisplayCondition(5000000, 1e10)
+      }
+    });
 
-    // Función para configurar la hora
+    // --- Función para configurar la hora ---
     function setTimeOfDay(timeOfDay) {
       let isoTime;
       if (timeOfDay === "day") {
@@ -187,10 +298,14 @@
     function startUpdatingCoordinates() {
       coordinateInterval = setInterval(() => {
         const cartographic = viewer.camera.positionCartographic;
-        const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
-        const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
-        document.getElementById("coordinatesDisplay").innerText = "Lat: " + lat + " | Lon: " + lon;
-      }, 100);
+        if (cartographic.height < 1e7) {
+          const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
+          const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
+          document.getElementById("coordinatesDisplay").innerText = "Lat: " + lat + " | Lon: " + lon;
+        } else {
+          document.getElementById("coordinatesDisplay").innerText = "";
+        }
+      }, 500);
     }
     function stopUpdatingCoordinates() {
       if(coordinateInterval) {
@@ -198,31 +313,34 @@
         coordinateInterval = null;
       }
     }
-    // --- Fin de coordenadas ---
 
-    // Parámetros de animación
-    const overviewHeight = 5000000;      // Vista general
-    const overviewDuration = 15;         // 15 segundos para vuelo a vista general
-    const destinationDuration = 15;      // 20 segundos para el descenso a la ubicación
-    const awayDuration = 15;             // 20 segundos para el alejamiento
+    // --- Parámetros de animación ---
+    const overviewHeight = 5000000;      // Altura para vista general
+    const overviewDuration = 5;          // Duración de la vista general
+    const destinationDuration = 5;       // Descenso a la ubicación en 5 segundos
+    const awayDuration = 5;              // Duración del alejamiento global
     const awayHeightGlobal = 10000000;   // Altura para ver el planeta completo
 
-    // Vuelo a vista general
+    // --- Función: Vuelo a vista general ---
     function flyToOverview(location, callback) {
       document.getElementById('cityName').innerText = "";
-      // Siempre mostramos "RASTREANDO" al inicio
       const objEl = document.getElementById('objectiveFound');
       objEl.innerText = "RASTREANDO";
       objEl.style.opacity = 1;
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, overviewHeight),
-        duration: overviewDuration,
-        complete: callback,
-        cancel: callback
-      });
+      try {
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, overviewHeight),
+          duration: overviewDuration,
+          complete: callback,
+          cancel: callback
+        });
+      } catch (e) {
+        console.error(e);
+        callback();
+      }
     }
 
-    // Giro en vista general con movimientos aleatorios (duración extendida)
+    // --- Función: Giro en vista general (movimiento aleatorio breve) ---
     function spinAroundOverview(callback) {
       const objEl = document.getElementById('objectiveFound');
       objEl.innerText = "RASTREANDO";
@@ -230,153 +348,132 @@
       const start = performance.now();
       const initialHeading = viewer.camera.heading;
       const initialPitch = viewer.camera.pitch;
-      // Genera pequeños offsets aleatorios para heading y pitch (±5° aprox.)
       const randomHeadingOffset = Cesium.Math.toRadians((Math.random() - 0.5) * 10);
       const randomPitchOffset = Cesium.Math.toRadians((Math.random() - 0.5) * 10);
-      // Duración extendida para que se note el movimiento
-      const duration = 12000;
+      const duration = 5000;
       function spin() {
-        const elapsed = performance.now() - start;
-        let fraction = elapsed / duration;
-        if (fraction > 1) fraction = 1;
-        const newPitch = initialPitch + 0.1 * Math.sin(fraction * Math.PI) + randomPitchOffset;
-        viewer.camera.setView({
-          orientation: {
-            heading: initialHeading + fraction * Cesium.Math.TWO_PI + randomHeadingOffset,
-            pitch: newPitch,
-            roll: viewer.camera.roll
+        try {
+          const elapsed = performance.now() - start;
+          let fraction = elapsed / duration;
+          if (fraction > 1) fraction = 1;
+          const newPitch = initialPitch + 0.1 * Math.sin(fraction * Math.PI) + randomPitchOffset;
+          viewer.camera.setView({
+            orientation: {
+              heading: initialHeading + fraction * Cesium.Math.TWO_PI + randomHeadingOffset,
+              pitch: newPitch,
+              roll: viewer.camera.roll
+            }
+          });
+          if (fraction < 1) {
+            requestAnimationFrame(spin);
+          } else {
+            callback();
           }
-        });
-        if (fraction < 1) {
-          requestAnimationFrame(spin);
-        } else {
+        } catch (e) {
+          console.error(e);
           callback();
         }
       }
       requestAnimationFrame(spin);
     }
 
-    // Vuelo a la ubicación destino (descenso)
+    // --- Función: Vuelo a la ubicación destino (descenso natural) ---
     function flyToDestination(location, callback) {
       document.getElementById('cityName').innerText = location.city;
-      // Durante el descenso, seguimos mostrando "RASTREANDO"
       const objEl = document.getElementById('objectiveFound');
       objEl.innerText = "RASTREANDO";
       objEl.style.opacity = 1;
       setTimeOfDay(location.timeOfDay);
-      // Inicia actualización de coordenadas para mostrar lat/lon en tiempo real
       startUpdatingCoordinates();
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, location.height + 200),
-        duration: destinationDuration,
-        complete: () => {
-          // Al llegar, detenemos la actualización y dejamos fijas las coordenadas
-          stopUpdatingCoordinates();
-          callback();
-        },
-        cancel: callback
-      });
+      try {
+        // Descenso sin forzar una orientación específica, para conservar la vista natural de arriba hacia abajo
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, location.height + 200),
+          duration: destinationDuration,
+          complete: () => {
+            stopUpdatingCoordinates();
+            callback();
+          },
+          cancel: callback
+        });
+      } catch (e) {
+        console.error(e);
+        stopUpdatingCoordinates();
+        callback();
+      }
     }
 
-    // Función que muestra el marcador rojo y, tras 1 segundo, cambia el mensaje a "OBJETIVO ENCONTRADO" y ejecuta el giro en destino
-    function showTargetFoundAndSpin(location, callback) {
-      // Agrega el marcador rojo
+    // --- Función: Coloca el marcador rojo fijo sobre la ubicación y espera ---
+    function showTargetFound(location, callback) {
+      // Coloca el marcador en la ubicación con un offset para que se vea sobre la casa
       const marker = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, 0),
+        position: Cesium.Cartesian3.fromDegrees(location.lon, location.lat, location.height + 50),
         billboard: {
           image: 'https://img.icons8.com/fluency/48/ff0000/marker.png',
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
           scale: 1.0
         }
       });
-      // Espera 1 segundo antes de cambiar el mensaje y comenzar el giro
+      // Espera 1 segundo para que la cámara termine de bajar y se muestre el marcador
       setTimeout(() => {
-        const objEl = document.getElementById('objectiveFound');
-        objEl.innerText = "OBJETIVO ENCONTRADO";
-        // Inicia el giro en destino: 720° en 5 segundos con efecto 3D
-        spinAtDestination(() => {
-          // Una vez finalizado el giro, elimina el marcador
+        document.getElementById('objectiveFound').innerText = "OBJETIVO ENCONTRADO";
+        // Mantiene el marcador visible durante 3 segundos y luego lo elimina
+        setTimeout(() => {
           viewer.entities.remove(marker);
           callback();
-        });
+        }, 3000);
       }, 1000);
     }
 
-    // Giro en destino: 720° (2 rotaciones) en 5 segundos con efecto 3D (subida y bajada)
-    function spinAtDestination(callback) {
-      const duration = 8000;
-      const start = performance.now();
-      const initialHeading = viewer.camera.heading;
-      const initialPitch = viewer.camera.pitch;
-      function spin() {
-        const elapsed = performance.now() - start;
-        let fraction = elapsed / duration;
-        if (fraction > 1) fraction = 1;
-        const newHeading = initialHeading + fraction * (2 * Cesium.Math.TWO_PI);
-        const newPitch = initialPitch + 0.1 * Math.sin(fraction * Math.PI);
-        viewer.camera.setView({
-          orientation: {
-            heading: newHeading,
-            pitch: newPitch,
-            roll: viewer.camera.roll
-          }
-        });
-        if (fraction < 1) {
-          requestAnimationFrame(spin);
-        } else {
-          callback();
-        }
-      }
-      requestAnimationFrame(spin);
-    }
-
-    // Alejamiento con zoom out global
-    function flyAwayAndZoomOut(callback) {
+    // --- Función: Orbita la cámara alrededor del punto destino sin mover el marcador ---
+    function orbitAroundDestination(location, callback) {
+      // Calcula el centro de órbita (la posición del marcador)
+      const center = Cesium.Cartesian3.fromDegrees(location.lon, location.lat, location.height + 50);
+      // Obtén la posición actual de la cámara
+      const currentPos = viewer.camera.position.clone();
+      // Calcula el vector desde el centro hasta la cámara
+      const vector = Cesium.Cartesian3.subtract(currentPos, center, new Cesium.Cartesian3());
+      // Calcula la normal en el centro (para usarla como eje de rotación)
+      const up = viewer.scene.globe.ellipsoid.geodeticSurfaceNormal(center, new Cesium.Cartesian3());
+      // Queremos rotar el vector 45° alrededor de 'up'
+      const angle = Cesium.Math.toRadians(45);
+      const rotationQuat = Cesium.Quaternion.fromAxisAngle(up, angle);
+      const rotatedVector = Cesium.Matrix3.multiplyByVector(Cesium.Matrix3.fromQuaternion(rotationQuat), vector, new Cesium.Cartesian3());
+      // Calcula la nueva posición de la cámara
+      const newPos = Cesium.Cartesian3.add(center, rotatedVector, new Cesium.Cartesian3());
+      // Realiza un flyTo suave a la nueva posición, manteniendo el centro (center) en foco
       viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(0, 0, awayHeightGlobal),
-        duration: awayDuration,
+        destination: newPos,
+        orientation: {
+          direction: Cesium.Cartesian3.normalize(Cesium.Cartesian3.subtract(center, newPos, new Cesium.Cartesian3()), new Cesium.Cartesian3()),
+          up: up
+        },
+        duration: 5,
         complete: callback,
         cancel: callback
       });
     }
 
-    // Giro tras zoom (5 segundos, 45° con efecto 3D)
-    function spinAfterZoom(callback) {
-      const duration = 8000;
-      const extraAngle = Cesium.Math.toRadians(45);
-      const start = performance.now();
-      const initialHeading = viewer.camera.heading;
-      const initialPitch = viewer.camera.pitch;
-      function spin() {
-        const elapsed = performance.now() - start;
-        let fraction = elapsed / duration;
-        if (fraction > 1) fraction = 1;
-        const newHeading = initialHeading + fraction * extraAngle;
-        const newPitch = initialPitch + 0.05 * Math.sin(fraction * Math.PI);
-        viewer.camera.setView({
-          orientation: {
-            heading: newHeading,
-            pitch: newPitch,
-            roll: viewer.camera.roll
-          }
+    // --- Función: Alejamiento con zoom out global ---
+    function flyAwayAndZoomOut(callback) {
+      try {
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(0, 0, awayHeightGlobal),
+          duration: awayDuration,
+          complete: callback,
+          cancel: callback
         });
-        if (fraction < 1) {
-          requestAnimationFrame(spin);
-        } else {
-          callback();
-        }
+      } catch (e) {
+        console.error(e);
+        callback();
       }
-      requestAnimationFrame(spin);
     }
 
-    // Orquesta el recorrido entre ubicaciones:
-    // Se vuela a la vista general, se realizan giros con movimientos aleatorios,
-    // se desciende (actualizando las coordenadas en la esquina) y al llegar se muestra el marcador.
-    // Tras 1 segundo, cambia el mensaje y se ejecuta el giro en destino;
-    // luego se espera 2 (o 3) segundos antes de iniciar el alejamiento.
+    // --- Orquesta el recorrido entre ubicaciones ---
     function flyThroughLocations(index) {
       if (index >= locations.length) {
-        console.log("Recorrido completo");
+        shuffle(locations);
+        flyThroughLocations(0);
         return;
       }
       const location = locations[index];
@@ -384,30 +481,56 @@
         spinAroundOverview(() => {
           flyToDestination(location, () => {
             console.log("Llegamos a " + location.city);
-            showTargetFoundAndSpin(location, () => {
-              // Espera 3 segundos antes de iniciar el alejamiento
-              setTimeout(() => {
+            // Primero se coloca el marcador fijo y se muestra el mensaje
+            showTargetFound(location, () => {
+              // Luego se realiza una órbita suave de la cámara alrededor del punto (sin mover el marcador)
+              orbitAroundDestination(location, () => {
                 flyAwayAndZoomOut(() => {
-                  spinAfterZoom(() => {
-                    flyThroughLocations(index + 1);
-                  });
+                  flyThroughLocations(index + 1);
                 });
-              }, 3000);
+              });
             });
           });
         });
       });
     }
 
-    // Inicio: tras el fade-out inicial
+    // --- Hacker feed: actualización con scroll automático ---
+    const hackerMessages = [
+      "Cargando módulos...",
+      "Bypass del firewall en curso...",
+      "Extrayendo datos...",
+      "Acceso concedido a la red interna...",
+      "Analizando tráfico...",
+      "Reconectando...",
+      "Iniciando hackeo..."
+    ];
+    function updateHackerFeed() {
+      try {
+        const feed = document.getElementById('hackerFeed');
+        const randomMessage = hackerMessages[Math.floor(Math.random() * hackerMessages.length)];
+        const p = document.createElement("p");
+        p.textContent = randomMessage;
+        feed.appendChild(p);
+        while (feed.childElementCount > 10) {
+          feed.removeChild(feed.firstChild);
+        }
+        feed.scrollTop = feed.scrollHeight;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    setInterval(updateHackerFeed, 2000);
+
+    // --- Inicio: Tras el fade-in inicial ---
     window.addEventListener('load', () => {
       setTimeout(() => {
         document.getElementById('fadeOverlay').style.opacity = 0;
         setTimeout(() => {
           document.getElementById('fadeOverlay').remove();
           flyThroughLocations(0);
-        }, 4000);
-      }, 4000);
+        }, 2000);
+      }, 2000);
     });
   </script>
 </body>
