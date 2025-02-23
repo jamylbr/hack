@@ -237,7 +237,7 @@
     setInterval(addGlitchEffect, 15000);
 
     // Token y configuración de Cesium Ion (reemplaza 'YOUR_TOKEN_HERE' por tu token)
-    Cesium.Ion.defaultAccessToken = 'YOUR_TOKEN_HERE';
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiOGNjNjczOS05ODM1LTQ4YjQtOTczNy1lNDliMTg4NzkyNTEiLCJpZCI6Mjc3ODQyLCJpYXQiOjE3NDAwOTgyMzl9.h5RevJ_fpBIjEHlogZOePThDrY3SqygU2FiRkSnXmLM';
     const viewer = new Cesium.Viewer('cesiumContainer', {
       imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
       baseLayerPicker: false,
@@ -617,6 +617,24 @@
     }
     document.addEventListener('DOMContentLoaded', startAudioCycle);
     window.addEventListener('load', startAudioCycle);
+  </script>
+   <!-- Nuevo control de audio para "21 risa" -->
+   <script>
+    // Suponiendo que el archivo se llama "21risa.mp3" y se encuentra en la carpeta "videos"
+    const risa = new Audio("videos/risa1.mp3");
+    risa.volume = 1.0; // Sonido fuerte
+    function cycleRisa() {
+      risa.currentTime = 0;
+      risa.play();
+      // Reproduce por 6 segundos y luego se pausa
+      setTimeout(() => {
+        risa.pause();
+        // Espera 30 segundos y vuelve a llamar a la función
+        setTimeout(cycleRisa, 30000);
+      }, 6000);
+    }
+    document.addEventListener('DOMContentLoaded', cycleRisa);
+    window.addEventListener('load', cycleRisa);
   </script>
 </body>
 </html>
