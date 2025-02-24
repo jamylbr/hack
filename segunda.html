@@ -6,8 +6,9 @@
   <!-- Incluye CesiumJS -->
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  
   <style>
-    /* Estilos globales */
+    /* ESTILOS GLOBALES */
     html, body {
       width: 100%;
       height: 100%;
@@ -16,7 +17,7 @@
       overflow: hidden;
       background: black;
     }
-    /* Contenedor de Cesium */
+    /* CONTENEDOR DE CESIUM */
     #cesiumContainer {
       position: absolute;
       top: 0;
@@ -25,7 +26,7 @@
       height: 100%;
       z-index: 1;
     }
-    /* Overlay para el nombre de la ciudad */
+    /* OVERLAY PARA EL NOMBRE DE LA CIUDAD */
     #cityName {
       position: absolute;
       top: 20px;
@@ -36,7 +37,7 @@
       text-shadow: 1px 1px 3px black;
       z-index: 3;
     }
-    /* Overlay para mensajes (acciones) */
+    /* OVERLAY PARA MENSAJES (ACCIONES) */
     #objectiveFound {
       position: absolute;
       bottom: 20px;
@@ -54,7 +55,7 @@
       50% { opacity: 0; }
       100% { opacity: 1; }
     }
-    /* Fade-in inicial */
+    /* FADE-IN INICIAL */
     #fadeOverlay {
       position: absolute;
       width: 100%;
@@ -64,7 +65,7 @@
       opacity: 1;
       transition: opacity 4s ease;
     }
-    /* Coordenadas (esquina inferior derecha) */
+    /* COORDENADAS (ESQUINA INFERIOR DERECHA) */
     #coordinatesDisplay {
       position: absolute;
       bottom: 10px;
@@ -77,7 +78,7 @@
       border-radius: 4px;
       z-index: 5;
     }
-    /* Hacker feed: mensajes (derecha) */
+    /* HACKER FEED: MENSAJES (DERECHA) */
     #hackerFeed {
       position: absolute;
       bottom: 50px;
@@ -93,7 +94,7 @@
       z-index: 6;
       overflow-y: auto;
     }
-    /* Hacker Avatar (esquina superior izquierda) */
+    /* HACKER AVATAR (ESQUINA SUPERIOR IZQUIERDA) */
     #hackerAvatar {
       position: absolute;
       top: 10px;
@@ -102,87 +103,84 @@
       height: 100px;
       z-index: 7;
     }
-    /* Contenedor del video hacker con posición relativa */
+    /* CONTENEDOR DEL VIDEO HACKER CON POSICIÓN RELATIVA */
     #hackerVideoContainer {
-      position: relative;
-      width: 400px;
+      position: cover;
+      width: 500px;
     }
-    /* Video hacker */
+    /* VIDEO HACKER */
     #hackerVideo {
       width: 100%;
       display: block;
+      /* TRANSICIÓN PARA EL EFECTO FADE (DESVANECIMIENTO) */
+      transition: opacity 1s ease;
+      opacity: 1;
     }
-    /* Overlay de imágenes sobre el video hacker */
+    /* OVERLAY DE IMÁGENES SOBRE EL VIDEO HACKER */
     .imagenes-overlay {
-  position: absolute;
-  top: -120px; /* Ajusta este valor según lo necesites */
-  left: 0;
-  width: 100%;
-  display: flex;
-  gap: 10px;
-  z-index: 10;
-  margin: 0;
-  padding: 0;
-}
-
+      position: absolute;
+      top: -190px; /* AJUSTA ESTE VALOR SEGÚN NECESITES */
+      left: 0;
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+      margin: 0;
+      padding: 0;
+    }
     .image-wrapper {
       position: relative;
     }
     .image-wrapper img {
-      width: 100px;
-      height: 100px;
+      width: 150px;
+      height: 150px;
       object-fit: cover;
       display: block;
+      
+
     }
-    /* En la primera imagen se muestra el logo de WhatsApp y el texto, alineados a la izquierda */
+    /* EN LA PRIMERA IMAGEN SE MUESTRA EL LOGO DE WHATSAPP Y EL TEXTO, ALINEADOS A LA IZQUIERDA */
     .image-wrapper:first-child .overlay-text {
-      position: absolute;
-      top: 10px;
-      left: 30px;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      background: rgba(0, 0, 0, 0.5);
-      font-size: 12px;
-      color: white;
-      gap: 5px;
-      padding-left: 5px;
-    }
-    .whatsapp-logo {
-      width: 20px;
-      height: 20px;
-      object-fit: contain;
-    }
-    /* Wrapper para el contenedor del video hacker, posicionado en la esquina inferior izquierda */
+  position: absolute;
+  top: -40px;
+  left: 50px;
+  /* Elimina width y height o cámbialos a auto */
+  width: auto;
+  height: auto;
+  
+  /* Si quieres que el recuadro envuelva el texto de manera natural, 
+     quita display:flex o cámbialo a inline-block */
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.5);
+  font-size: 25px;
+  color: white;
+  padding: 3px 5px; /* para un margen alrededor del texto */
+}
+
+    
+    /* WRAPPER PARA EL CONTENEDOR DEL VIDEO HACKER, POSICIONADO EN LA ESQUINA INFERIOR IZQUIERDA */
     #hackerVideoContainerWrapper {
       position: absolute;
       bottom: 50px;
-      left: 20px;
-      width: 400px;
+      left: 50px;
+      width: 600px;
       z-index: 6;
     }
-   
-
-.overlay-text {
-  position: absolute;
-  top: -120px;   /* Ajusta según necesites */
-  left: 0;
-  font-size: 14px;
-  color: white;
-  background: rgba(0,0,0,0.5);
-  padding: 3px 5px;
-}
-
+    .overlay-text {
+      position: absolute;
+      top: -90px;   /* AJUSTA SEGÚN NECESITES */
+      left: 0;
+      font-size: 25px;
+      color: white;
+      background: rgba(0,0,0,0.5);
+      padding: 3px 5px;
+    }
   </style>
 </head>
 <body>
-  <!-- Cesium y demás overlays -->
+  <!-- CESIUM Y DEMÁS OVERLAYS -->
   <div id="cesiumContainer"></div>
-  <div id="hackerAvatar">
-    <img src="https://img.icons8.com/fluency/96/hacker-mask.png" alt="Hacker">
-  </div>
+  
   <div id="cityName"></div>
   <div id="objectiveFound">RASTREANDO</div>
   <div id="coordinatesDisplay"></div>
@@ -193,40 +191,41 @@
   </div>
   <div id="fadeOverlay"></div>
   
-  <!-- Wrapper para el video hacker (se mantiene a la izquierda) -->
+  <!-- WRAPPER PARA EL VIDEO HACKER (SE MANTIENE A LA IZQUIERDA) -->
   <div id="hackerVideoContainerWrapper">
     <div id="hackerVideoContainer">
-      <video id="hackerVideo" src="videos/finalhack.mp4" autoplay loop muted></video>
+      <!-- ESTE ES EL VIDEO QUE SE MODIFICARÁ DINÁMICAMENTE -->
+      <video id="hackerVideo" src="videos/hacker3.mp4" autoplay loop muted></video>
       <div class="imagenes-overlay">
         <div class="image-wrapper">
-          <!-- Imagen sin nombre por defecto -->
+          <!-- IMAGEN SIN NOMBRE POR DEFECTO -->
           <img src="videos/rosquilla.jpg" alt="">
-          <!-- Tu texto personalizado encima de la imagen -->
-          <div class="overlay-text" style="position: absolute; top: -100px; left: 0;">
+          <!-- TEXTO PERSONALIZADO SOBRE LA IMAGEN -->
+          <div class="overlay-text" style="position: absolute; top: -110px; left: 0;">
             Rosquilla y te ubico
           </div>
         </div>
-        
         <div class="image-wrapper">
           <img src="videos/gorra.jpg" alt="">
-          <div class="overlay-text" style="position: absolute; top: -70px; left: 0;">
+          <div class="overlay-text" style="position: absolute; top: -110px; left: 0;">
             Gorra y ubico a tu ex
           </div>
         </div>
-        
         <div class="image-wrapper">
           <img src="videos/pistola.jpg" alt="">
-          <div class="overlay-text" style="position: absolute; top: -70px; left: 0;">
+          <div class="overlay-text" style="position: absolute; top: -110px; left: 0;">
             Pisto y doy mi WhatsApp
           </div>
         </div>
-        
       </div>
     </div>
   </div>
 
   <script>
-    // Función para efecto glitch en el video hacker
+    /***********************************************************************
+     * FUNCIONES Y CONFIGURACIÓN EXISTENTES
+     ***********************************************************************/
+    // EFECTO GLITCH EN EL VIDEO HACKER
     function addGlitchEffect() {
       const video = document.getElementById("hackerVideo");
       video.style.animation = "glitch 1s steps(5, end)";
@@ -236,7 +235,7 @@
     }
     setInterval(addGlitchEffect, 15000);
 
-    // Token y configuración de Cesium Ion (reemplaza 'YOUR_TOKEN_HERE' por tu token)
+    // TOKEN Y CONFIGURACIÓN DE CESIUM ION
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiOGNjNjczOS05ODM1LTQ4YjQtOTczNy1lNDliMTg4NzkyNTEiLCJpZCI6Mjc3ODQyLCJpYXQiOjE3NDAwOTgyMzl9.h5RevJ_fpBIjEHlogZOePThDrY3SqygU2FiRkSnXmLM';
     const viewer = new Cesium.Viewer('cesiumContainer', {
       imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
@@ -254,7 +253,7 @@
       }
     }
 
-    // Definición de ubicaciones
+    // DEFINICIÓN DE UBICACIONES
     const locationsUSMexico = [
       { lon: -46.6333, lat: -23.5505, height: 20, city: "São Paulo, Brasil", timeOfDay: "night" },
       { lon: -118.2437, lat: 34.0522, height: 20, city: "Los Angeles, USA", timeOfDay: "night" },
@@ -577,7 +576,8 @@
       }, 2000);
     });
   </script>
-  <!-- Control de audio -->
+  
+  <!-- CONTROL DE AUDIO EXISTENTE -->
   <script>
     const audio1 = new Audio("videos/typing1.mp3");
     const audio2 = new Audio("videos/typing2.mp3");
@@ -618,23 +618,140 @@
     document.addEventListener('DOMContentLoaded', startAudioCycle);
     window.addEventListener('load', startAudioCycle);
   </script>
-   <!-- Nuevo control de audio para "21 risa" -->
-   <script>
-    // Suponiendo que el archivo se llama "21risa.mp3" y se encuentra en la carpeta "videos"
-    const risa = new Audio("videos/risa1.mp3");
-    risa.volume = 1.0; // Sonido fuerte
-    function cycleRisa() {
-      risa.currentTime = 0;
-      risa.play();
-      // Reproduce por 6 segundos y luego se pausa
+  
+  <!-- CONTROL DE AUDIO PARA "21 risa" -->
+  
+  <!-- NUEVO SCRIPT: CONTROL DE VIDEOS Y AUDIOS ALEATORIOS SEGÚN CATEGORÍA -->
+  <script>
+    /***********************************************************************
+     * ARRAYS DE AUDIOS POR CATEGORÍA
+     ***********************************************************************/
+    // Audios para la categoría HABLAR (VIDEO chica1.mp4)
+    const hablarAudios = [
+      "audios/hablar1.mp3",
+      "audios/hablar2.mp3",
+      "audios/hablar3.mp3",
+      "audios/hablar4.mp3",
+      "audios/hablar5.mp3",
+      "audios/hablar6.mp3"
+      
+      // Agrega más audios HABLAR según necesites...
+    ];
+    
+    // Audios para la categoría TRANQUILO (VIDEO chica2.mp4)
+    const tranquiloAudios = [
+      "audios/tranquilo1.mp3",
+      "audios/tranquilo2.mp3",
+      "audios/tranquilo3.mp3",
+      "audios/tranquilo4.mp3",
+      "audios/tranquilo5.mp3",
+      // Agrega más audios TRANQUILO según necesites...
+    ];
+    
+    // Audios para la categoría RISA (VIDEO chica3.mp4)
+    const risaAudios = [
+      "audios/risa1.mp3",
+      "audios/risa2.mp3",
+      "audios/risa3.mp3",
+      "audios/risa4.mp3",
+      "audios/risa5.mp3",
+      // Agrega más audios RISA según necesites...
+    ];
+    
+    /***********************************************************************
+     * VARIABLES DE VIDEO PARA CADA CATEGORÍA
+     ***********************************************************************/
+    const videoChica1 = "videos/chica1.mp4"; // Para audios HABLAR
+    const videoChica2 = "videos/chica2.mp4"; // Para audios TRANQUILO
+    const videoChica3 = "videos/chica3.mp4"; // Para audios RISA
+    
+    /***********************************************************************
+     * FUNCIÓN: changeVideo
+     * Cambia el video actual con efecto de desvanecimiento (fade out/in)
+     ***********************************************************************/
+    function changeVideo(newSrc, callback) {
+      const video = document.getElementById("hackerVideo");
+      // Fade out
+      video.style.opacity = 0;
       setTimeout(() => {
-        risa.pause();
-        // Espera 30 segundos y vuelve a llamar a la función
-        setTimeout(cycleRisa, 30000);
-      }, 6000);
+        video.src = newSrc;
+        video.load();
+        video.play();
+        // Fade in
+        video.style.opacity = 1;
+        if (callback) callback();
+      }, 1000);
     }
-    document.addEventListener('DOMContentLoaded', cycleRisa);
-    window.addEventListener('load', cycleRisa);
+    
+    /***********************************************************************
+     * FUNCIÓN: playRandomAudio
+     * Selecciona aleatoriamente un audio, cambia el video según la categoría,
+     * y reproduce el audio. Se asegura que solo se programe el siguiente ciclo una vez.
+     ***********************************************************************/
+    function playRandomAudio() {
+      // Calcula el total de audios y selecciona uno aleatoriamente
+      const totalAudios = hablarAudios.length + tranquiloAudios.length + risaAudios.length;
+      const randIndex = Math.floor(Math.random() * totalAudios);
+      
+      let audioSrc, newVideoSrc, category;
+      
+      if (randIndex < hablarAudios.length) {
+        audioSrc = hablarAudios[randIndex];
+        newVideoSrc = videoChica1;
+        category = "hablar";
+      } else if (randIndex < hablarAudios.length + tranquiloAudios.length) {
+        const index = randIndex - hablarAudios.length;
+        audioSrc = tranquiloAudios[index];
+        newVideoSrc = videoChica2;
+        category = "tranquilo";
+      } else {
+        const index = randIndex - hablarAudios.length - tranquiloAudios.length;
+        audioSrc = risaAudios[index];
+        newVideoSrc = videoChica3;
+        category = "risa";
+      }
+      
+      // Cambia el video con efecto fade y luego reproduce el audio
+      changeVideo(newVideoSrc, () => {
+        const audio = new Audio(audioSrc);
+        audio.volume = 1.0;
+        // FLAG LOCAL PARA EVITAR PROGRAMAR MÁS DE UNA VEZ
+        let scheduled = false;
+        function scheduleOnce() {
+          if (!scheduled) {
+            scheduled = true;
+            scheduleNextAudio();
+          }
+        }
+        // Programa el siguiente ciclo cuando el audio termina
+        audio.onended = scheduleOnce;
+        // Inicia la reproducción del audio y captura posibles errores
+        audio.play().catch(err => {
+          console.error("Error en reproducción de audio:", err);
+          scheduleOnce();
+        });
+        // Fallback: si después de 8 segundos el audio no terminó, programa el siguiente ciclo
+        setTimeout(scheduleOnce, 8000);
+      });
+    }
+    
+    /***********************************************************************
+     * FUNCIÓN: scheduleNextAudio
+     * Programa el próximo ciclo de audio/video tras un retardo aleatorio
+     * entre 5 y 10 segundos.
+     ***********************************************************************/
+    function scheduleNextAudio() {
+      const delay = Math.random() * 5000 + 5000; // Entre 5 y 10 segundos
+      setTimeout(playRandomAudio, delay);
+    }
+    
+    /***********************************************************************
+     * INICIO DEL CICLO DE VIDEOS Y AUDIOS ALEATORIOS
+     * Se inicia 2 segundos después de cargar la página.
+     ***********************************************************************/
+    window.addEventListener('load', function() {
+      setTimeout(playRandomAudio, 2000);
+    });
   </script>
 </body>
 </html>
